@@ -2122,16 +2122,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if ("blur".equals(mode)) {
                     art = HeroArt.from(new android.graphics.drawable.BitmapDrawable(getResources(), item.poster));
                 } else if ("heavy".equals(mode)) {
-                    // Halve in filtered steps down to 16x9, so every step averages its pixels: the poster's own
-                    // colours and brightness, no shapes, and none of the blockiness of one big jump.
+                    // Halve in filtered steps down to 8x5, so every step averages its pixels: the poster's own
+                    // colours and brightness, no shapes, and none of the blockiness of one big jump. Then up to
+                    // 32x18, filtered, so the stretch over the screen is a smooth gradient rather than facets.
                     art = item.poster;
                     int w = art.getWidth(), h = art.getHeight();
-                    while (w / 2 >= 16 && h / 2 >= 9) {
+                    while (w / 2 >= 8 && h / 2 >= 5) {
                         w /= 2;
                         h /= 2;
                         art = Bitmap.createScaledBitmap(art, w, h, true);
                     }
-                    art = Bitmap.createScaledBitmap(art, 16, 9, true);
+                    art = Bitmap.createScaledBitmap(Bitmap.createScaledBitmap(art, 8, 5, true), 32, 18, true);
                 } else {
                     art = Bitmap.createScaledBitmap(item.poster, 160, 90, true);
                 }
