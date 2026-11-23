@@ -7,6 +7,8 @@ that has no clock, date or greeting. Feature request upstream: [#4407](https://g
 
 ![Home on a TCL S551G: the "Previously On…" row with real posters, episodes and progress, over a blur of the focused card's poster](docs/fork/home.jpg)
 
+![The dock with the focused app glowing in its own colour, tiles floating without a band](docs/fork/dock-glow.jpg)
+
 **Tested on:** TCL S551G (US S5; G10, `G10_4K_US_NF`), Google TV 12, `STT2.230203.001`, launcherx disabled.
 Prime Video, Netflix, Peacock, Max, Disney+ and Apple TV publish Watch Next rows there; every poster is `https://`.
 
