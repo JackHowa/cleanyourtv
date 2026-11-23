@@ -1,9 +1,11 @@
-# JackHowa/cleanyourtv (`my-tv`): Continue watching on a clean, clock-free Home
+# JackHowa/cleanyourtv (`my-tv`): a clean, glassy Home with minimal info
 
-A fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv) for a TCL S551G. It puts the
-Continue watching row from [burnhamrobertp's fork](https://github.com/burnhamrobertp/cleanyourtv/blob/ac1fff7bf8f391c7da6337dfc251671f4df20420/FORK.md)
-(itself built on [gwiersma](https://github.com/gwiersma)'s row) onto today's upstream launcher, with a header
-that has no clock, date or greeting. Feature request upstream: [#4407](https://github.com/Gathin23/cleanyourtv/issues/4407).
+A fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv) for a TCL S551G, aiming for an Apple TV
+feel: glass, colour and artwork, and as little text as possible. No clock, date, greeting or "Last opened"; one
+"Previously On…" row of what you were watching, its poster blurred to a colour wash behind it; a focus that glows in
+each app's colour over floating tiles. The row is [burnhamrobertp's](https://github.com/burnhamrobertp/cleanyourtv/blob/ac1fff7bf8f391c7da6337dfc251671f4df20420/FORK.md)
+(built on [gwiersma](https://github.com/gwiersma)'s), on today's upstream launcher. Upstream request:
+[#4407](https://github.com/Gathin23/cleanyourtv/issues/4407).
 
 ![Home on a TCL S551G: the "Previously On…" row with real posters, episodes and progress, over a blur of the focused card's poster](docs/fork/home.jpg)
 
