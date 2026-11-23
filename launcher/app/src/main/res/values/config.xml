@@ -574,6 +574,12 @@
          lighter blur that keeps the picture), "heavy" (the poster's colours and light only, at its own
          brightness), or "poster" (the poster itself). Theme key: "continue_backdrop". -->
     <string name="continue_backdrop" translatable="false">none</string>
+    <!-- With cinematic_home, what fills the screen behind a focused dock app: "app" (its own artwork, softened; the
+         default), "preview" (one of the titles the app promotes in its preview channels, a different one each time
+         the app is focused again; needs continue_watching's READ_TV_LISTINGS and, for web posters, the posters
+         add-on) or "preview_heavy" (that title blurred to its colours). Apps that publish no titles keep "app".
+         Preview videos are never played. Theme key: "dock_backdrop". -->
+    <string name="dock_backdrop" translatable="false">app</string>
     <!-- The focus highlight's look: glass (the default: a translucent slab with a bright top sheen, a crisp rim and a
          faint outer glow), rim (the crisp rim alone, no sheen, fill or glow, for a quiet focus over a wallpaper) or
          halo (the rim with a lighter outer glow). Can also be set with "glass_style": "rim" in a theme's config.json. -->

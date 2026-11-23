@@ -95,6 +95,57 @@ final class ContinueWatching {
     };
 
     /** Runs on a background thread. Never throws: any failure is one log line and an empty list. */
+    /**
+     * The titles each app promotes in its preview channels (Netflix, Prime Video, Disney+, Apple TV, Peacock and
+     * YouTube publish them on a TCL G10), as poster URIs the launcher can open: the app's own local art, or the
+     * poster companion's for https posters. Up to six per app in table order, one per title. Preview videos are never
+     * read: the backdrop is a still. Off the main thread.
+     */
+    static Map<String, List<String>> previews(Context context) {
+        Map<String, List<String>> out = new HashMap<>();
+        boolean posterFetcher = hasPosterFetcher(context);
+        Map<String, java.util.Set<String>> titles = new HashMap<>();
+        try (Cursor c = context.getContentResolver().query(TvContract.PreviewPrograms.CONTENT_URI, new String[] {
+                TvContract.PreviewPrograms.COLUMN_PACKAGE_NAME, TvContract.PreviewPrograms.COLUMN_TITLE,
+                TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, TvContract.PreviewPrograms.COLUMN_THUMBNAIL_URI},
+                null, null, null)) {
+            while (c != null && c.moveToNext()) {
+                String pkg = str(c, TvContract.PreviewPrograms.COLUMN_PACKAGE_NAME);
+                if (pkg == null) continue;
+                List<String> list = out.get(pkg);
+                if (list != null && list.size() >= 6) continue;
+                String title = str(c, TvContract.PreviewPrograms.COLUMN_TITLE);
+                java.util.Set<String> seen = titles.get(pkg);
+                if (seen == null) titles.put(pkg, seen = new java.util.HashSet<>());
+                if (title != null && !seen.add(title)) continue;
+                String poster = str(c, TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI);
+                if (poster == null) poster = str(c, TvContract.PreviewPrograms.COLUMN_THUMBNAIL_URI);
+                String uri = posterUri(poster, posterFetcher);
+                if (uri == null) continue;
+                if (list == null) out.put(pkg, list = new ArrayList<>());
+                list.add(uri);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "preview programs not readable: " + e);
+        }
+        Log.i(TAG, "preview titles per app: " + out.keySet());
+        return out;
+    }
+
+    /** One poster by URI, from the shared cache or decoded (and cached); null when it cannot be read. Off the main thread. */
+    static Bitmap poster(Context context, String uri) {
+        Bitmap b = cached(uri);
+        if (b != null) return b;
+        b = decode(context.getContentResolver(), uri);
+        if (b != null) {
+            synchronized (CACHE) {
+                CACHE.put(uri, b);
+            }
+        }
+        return b;
+    }
+
+
     static List<Item> load(Context context) {
         List<Item> items = new ArrayList<>();
         ContentResolver cr = context.getContentResolver();
@@ -247,7 +298,7 @@ final class ContinueWatching {
                 && pm.checkSignatures(info.packageName, context.getPackageName()) == PackageManager.SIGNATURE_MATCH;
     }
 
-    private static Bitmap cached(String uri) {
+    static Bitmap cached(String uri) {
         if (uri == null) return null;
         synchronized (CACHE) {
             return CACHE.get(uri);

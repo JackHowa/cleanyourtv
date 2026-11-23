@@ -173,6 +173,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean heroMetaShown = true;
     /** config.xml continue_backdrop: none, blur, soft or poster behind a focused Continue watching card. */
     private String continueBackdrop = "none";
+    /** config.xml dock_backdrop: app, preview or preview_heavy behind a focused dock app. */
+    private String dockBackdrop = "app";
+    /** Each app's promoted titles (poster URIs), read with the Continue watching row; empty until then. */
+    private volatile Map<String, List<String>> previewUris = new HashMap<>();
+    /** Which of an app's titles shows next, advanced each time the app is focused again. */
+    private final Map<String, Integer> previewTurn = new HashMap<>();
+    /** The dock app whose title is up, so moving within it does not advance. */
+    private String previewPkg;
     /** The artwork's opacity behind the cinematic shelf (config.xml cinematic_art); 0 leaves it out. */
     private float heroArtAlpha = 0.5f;
     /** Softened artwork per app (HeroArt, about 5 KB each), made the first time its dock tile is focused. */
@@ -557,6 +565,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroDotsShown = cfg.cinematicDots;
         heroMetaShown = cfg.cinematicLastOpened;
         continueBackdrop = cfg.continueBackdrop;
+        dockBackdrop = cfg.dockBackdrop;
         cinematicWhiteFocus = cfg.cinematicWhiteFocus;
         heroArtAlpha = cfg.cinematicArt / 100f;
         if (cinematic) setUpCinematicShelf(cfg.cinematicScrim);
@@ -2089,6 +2098,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Swaps the backdrop to this app's artwork: fade out, swap, fade in, the way the shelf's name changes. */
     private void showHeroArt(int position) {
+        if (showPreviewArt(adapter.packageAt(position))) return;
         String key = adapter.keyAt(position);
         if (key == null) return;
         heroArt.animate().cancel();
@@ -2122,17 +2132,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if ("blur".equals(mode)) {
                     art = HeroArt.from(new android.graphics.drawable.BitmapDrawable(getResources(), item.poster));
                 } else if ("heavy".equals(mode)) {
-                    // Halve in filtered steps down to 8x5, so every step averages its pixels: the poster's own
-                    // colours and brightness, no shapes, and none of the blockiness of one big jump. Then up to
-                    // 32x18, filtered, so the stretch over the screen is a smooth gradient rather than facets.
-                    art = item.poster;
-                    int w = art.getWidth(), h = art.getHeight();
-                    while (w / 2 >= 8 && h / 2 >= 5) {
-                        w /= 2;
-                        h /= 2;
-                        art = Bitmap.createScaledBitmap(art, w, h, true);
-                    }
-                    art = Bitmap.createScaledBitmap(Bitmap.createScaledBitmap(art, 8, 5, true), 32, 18, true);
+                    art = heavyBlur(item.poster);
                 } else {
                     art = Bitmap.createScaledBitmap(item.poster, 160, 90, true);
                 }
@@ -2142,6 +2142,67 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         heroArt.animate().cancel();
         swapHeroArt(key, art);
+    }
+
+    /**
+     * Halve in filtered steps down to 8x5, so every step averages its pixels: the poster's own colours and brightness,
+     * no shapes, and none of the blockiness of one big jump. Then up to 32x18, filtered, so the stretch over the screen
+     * is a smooth gradient rather than facets.
+     */
+    private static Bitmap heavyBlur(Bitmap poster) {
+        Bitmap art = poster;
+        int w = art.getWidth(), h = art.getHeight();
+        while (w / 2 >= 8 && h / 2 >= 5) {
+            w /= 2;
+            h /= 2;
+            art = Bitmap.createScaledBitmap(art, w, h, true);
+        }
+        return Bitmap.createScaledBitmap(Bitmap.createScaledBitmap(art, 8, 5, true), 32, 18, true);
+    }
+
+    /**
+     * dock_backdrop preview / preview_heavy: one of the titles this app promotes, behind the shelf. A new title each
+     * time the app is focused again (not on every move inside it); the next one is fetched meanwhile. False when the
+     * app has none loaded yet, so the caller shows its own artwork.
+     */
+    private boolean showPreviewArt(String pkg) {
+        boolean heavy = "preview_heavy".equals(dockBackdrop);
+        if (pkg == null || (!heavy && !"preview".equals(dockBackdrop))) return false;
+        List<String> uris = previewUris.get(pkg);
+        if (uris == null || uris.isEmpty()) return false;
+        int turn = previewTurn.getOrDefault(pkg, 0);
+        if (!pkg.equals(previewPkg)) {
+            if (previewPkg != null) turn++;
+            previewPkg = pkg;
+            previewTurn.put(pkg, turn);
+        }
+        // The title for this turn, or the nearest earlier one that has loaded.
+        Bitmap poster = null;
+        String uri = null;
+        for (int i = 0; i < uris.size() && poster == null; i++) {
+            uri = uris.get(Math.floorMod(turn - i, uris.size()));
+            poster = ContinueWatching.cached(uri);
+        }
+        prefetchPreview(uris.get(Math.floorMod(turn + 1, uris.size())));
+        if (poster == null) {
+            prefetchPreview(uris.get(Math.floorMod(turn, uris.size())));
+            return false;
+        }
+        String key = (heavy ? "dockheavy:" : "poster:") + uri;
+        Bitmap art = heavy ? heroArtCache.get(key) : poster;
+        if (art == null) {
+            art = heavyBlur(poster);
+            heroArtCache.put(key, art);
+        }
+        heroArt.animate().cancel();
+        swapHeroArt(key, art);
+        return true;
+    }
+
+    private void prefetchPreview(String uri) {
+        if (uri == null || ContinueWatching.cached(uri) != null) return;
+        Context app = getApplicationContext();
+        new Thread(() -> ContinueWatching.poster(app, uri), "preview-poster").start();
     }
 
     /** Fade out, swap to next, fade in; straight in when nothing shows yet or without animations. */
@@ -2450,6 +2511,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (ContinueWatching.loadPoster(app, item)) handler.post(() -> {
                     if (continueRow != null) continueRow.showPoster(item);
                 });
+            }
+            // dock_backdrop preview: each app's promoted titles, and the first poster of each, so a focus finds one.
+            if (!"preview".equals(dockBackdrop) && !"preview_heavy".equals(dockBackdrop)) return;
+            Map<String, List<String>> previews = ContinueWatching.previews(app);
+            previewUris = previews;
+            for (List<String> uris : previews.values()) {
+                if (isFinishing() || isDestroyed()) return;
+                ContinueWatching.poster(app, uris.get(0));
             }
         }, "continue-watching").start();
     }

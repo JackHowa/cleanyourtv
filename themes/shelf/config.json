@@ -14,5 +14,6 @@
   "focus_overshoot": false,
   "advanced_effects": true,
   "glow_style": "horizon",
-  "dock_band": false
+  "dock_band": false,
+  "dock_backdrop": "preview"
 }
