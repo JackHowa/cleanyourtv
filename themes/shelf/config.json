@@ -4,14 +4,15 @@
   "show_clock": false,
   "show_greeting": false,
   "cinematic_home": true,
-  "cinematic_white_focus": true,
   "cinematic_last_opened": false,
   "continue_backdrop": "heavy",
   "dock_glass": true,
   "icon_only_buttons": true,
   "icon_only_inputs": true,
-  "app_glow": false,
+  "app_glow": true,
   "ambient_glow": false,
   "focus_overshoot": false,
-  "advanced_effects": true
+  "advanced_effects": true,
+  "glow_style": "horizon",
+  "dock_band": false
 }
