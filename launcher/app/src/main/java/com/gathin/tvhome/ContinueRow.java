@@ -34,7 +34,8 @@ import java.util.List;
 final class ContinueRow extends LinearLayout {
 
     interface Host {
-        void onRowFocused();
+        /** A card took focus; its item, whose poster may still be loading (null). */
+        void onRowFocused(ContinueWatching.Item item);
 
         void onRowUp();
 
@@ -323,7 +324,7 @@ final class ContinueRow extends LinearLayout {
             // the glass and the title back.
             if (focused) {
                 lastIndex = index;
-                host.onRowFocused();
+                host.onRowFocused(item);
             }
         });
         card.setOnClickListener(v -> host.onRowOpen(item));

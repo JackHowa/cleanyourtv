@@ -2098,14 +2098,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             art = HeroArt.from(adapter.artworkAt(position));
             if (art != null) heroArtCache.put(key, art);
         }
+        swapHeroArt(key, art);
+    }
+
+    /**
+     * On the cinematic shelf, a focused Continue watching card puts its own poster behind the row, as the shelf does
+     * with a dock app's artwork: the poster itself, not HeroArt's 48x27 wash, under the same scrim and alpha. A card
+     * still showing its app's banner (no poster yet) leaves the backdrop dark.
+     */
+    private void showRowArt(ContinueWatching.Item item) {
+        if (!cinematic || heroArtAlpha <= 0f || item == null || item.poster == null) return;
+        heroArt.animate().cancel();
+        swapHeroArt("row:" + System.identityHashCode(item.poster), item.poster);
+    }
+
+    /** Fade out, swap to next, fade in; straight in when nothing shows yet or without animations. */
+    private void swapHeroArt(String key, Bitmap next) {
+        if (key.equals(heroArtKey) && heroArt.getDrawable() != null) {
+            fadeHeroArt(420);
+            return;
+        }
         heroArtKey = key;
-        final Bitmap next = art;
+        // A real poster is cropped to fill; an app's 48x27 wash is stretched, which is what blurs it.
+        final ImageView.ScaleType scale = key.startsWith("row:") ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_XY;
         if (!animations || reducedMotion || heroArt.getAlpha() == 0f) {
+            heroArt.setScaleType(scale);
             heroArt.setImageBitmap(next);
             fadeHeroArt(600);
             return;
         }
         heroArt.animate().alpha(0f).setDuration(140).withEndAction(() -> {
+            heroArt.setScaleType(scale);
             heroArt.setImageBitmap(next);
             heroArt.animate().alpha(heroArtAlpha).setDuration(420).start();
         }).start();
@@ -2307,9 +2330,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void setUpContinueRow() {
         if (!getResources().getBoolean(R.bool.continue_watching) || !dockRow || singleRow) return;
         continueRow = new ContinueRow(this, new ContinueRow.Host() {
-            @Override public void onRowFocused() {
+            @Override public void onRowFocused(ContinueWatching.Item item) {
                 hideGlass();
                 hideHero();
+                showRowArt(item);
             }
 
             @Override public void onRowUp() {
