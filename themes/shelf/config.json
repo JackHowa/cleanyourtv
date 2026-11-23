@@ -6,6 +6,7 @@
   "cinematic_home": true,
   "cinematic_white_focus": true,
   "cinematic_last_opened": false,
+  "continue_backdrop": "heavy",
   "dock_glass": true,
   "icon_only_buttons": true,
   "icon_only_inputs": true,

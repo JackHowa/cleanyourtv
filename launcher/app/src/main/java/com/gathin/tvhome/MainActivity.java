@@ -171,6 +171,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean heroDotsShown = true;
     /** config.xml cinematic_last_opened: false leaves the "Last opened" line out of the cinematic shelf. */
     private boolean heroMetaShown = true;
+    /** config.xml continue_backdrop: none, blur, soft or poster behind a focused Continue watching card. */
+    private String continueBackdrop = "none";
     /** The artwork's opacity behind the cinematic shelf (config.xml cinematic_art); 0 leaves it out. */
     private float heroArtAlpha = 0.5f;
     /** Softened artwork per app (HeroArt, about 5 KB each), made the first time its dock tile is focused. */
@@ -554,6 +556,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         glowStyle = cfg.glowStyle;
         heroDotsShown = cfg.cinematicDots;
         heroMetaShown = cfg.cinematicLastOpened;
+        continueBackdrop = cfg.continueBackdrop;
         cinematicWhiteFocus = cfg.cinematicWhiteFocus;
         heroArtAlpha = cfg.cinematicArt / 100f;
         if (cinematic) setUpCinematicShelf(cfg.cinematicScrim);
@@ -2108,8 +2111,36 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     private void showRowArt(ContinueWatching.Item item) {
         if (!cinematic || heroArtAlpha <= 0f || item == null || item.poster == null) return;
+        String mode = continueBackdrop;
+        if (!"blur".equals(mode) && !"soft".equals(mode) && !"heavy".equals(mode) && !"poster".equals(mode)) return;
+        String key = mode + ":" + System.identityHashCode(item.poster);
+        Bitmap art = item.poster;
+        if (!"poster".equals(mode)) {
+            art = heroArtCache.get(key);
+            if (art == null) {
+                // blur: HeroArt's 48x27 wash, as for an app. soft: 160x90, stretched, so shapes stay readable.
+                if ("blur".equals(mode)) {
+                    art = HeroArt.from(new android.graphics.drawable.BitmapDrawable(getResources(), item.poster));
+                } else if ("heavy".equals(mode)) {
+                    // Halve in filtered steps down to 16x9, so every step averages its pixels: the poster's own
+                    // colours and brightness, no shapes, and none of the blockiness of one big jump.
+                    art = item.poster;
+                    int w = art.getWidth(), h = art.getHeight();
+                    while (w / 2 >= 16 && h / 2 >= 9) {
+                        w /= 2;
+                        h /= 2;
+                        art = Bitmap.createScaledBitmap(art, w, h, true);
+                    }
+                    art = Bitmap.createScaledBitmap(art, 16, 9, true);
+                } else {
+                    art = Bitmap.createScaledBitmap(item.poster, 160, 90, true);
+                }
+                if (art == null) return;
+                heroArtCache.put(key, art);
+            }
+        }
         heroArt.animate().cancel();
-        swapHeroArt("row:" + System.identityHashCode(item.poster), item.poster);
+        swapHeroArt(key, art);
     }
 
     /** Fade out, swap to next, fade in; straight in when nothing shows yet or without animations. */
@@ -2120,7 +2151,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         heroArtKey = key;
         // A real poster is cropped to fill; an app's 48x27 wash is stretched, which is what blurs it.
-        final ImageView.ScaleType scale = key.startsWith("row:") ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_XY;
+        final ImageView.ScaleType scale = key.startsWith("poster:") ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_XY;
         if (!animations || reducedMotion || heroArt.getAlpha() == 0f) {
             heroArt.setScaleType(scale);
             heroArt.setImageBitmap(next);

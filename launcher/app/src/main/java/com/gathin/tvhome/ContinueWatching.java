@@ -126,7 +126,11 @@ final class ContinueWatching {
                 if (type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE && progress >= DONE_FRACTION) continue;
 
                 String poster = str(c, TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI);
-                if (poster == null) poster = str(c, TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI);
+                String thumb = str(c, TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI);
+                // Which art each app publishes: is the thumbnail its own picture (an episode still) or the poster again?
+                Log.d(TAG, "art " + pkg + " type " + type + " poster " + (poster != null) + " thumbnail " + (thumb != null)
+                        + (poster != null && thumb != null ? (poster.equals(thumb) ? " (same)" : " (different: " + thumb + ")") : ""));
+                if (poster == null) poster = thumb;
                 Item item = new Item(pkg, title, subtitle(c), str(c, TvContract.WatchNextPrograms.COLUMN_INTENT_URI),
                         progress, posterUri(poster, posterFetcher), engaged);
                 item.poster = cached(item.posterUri);
